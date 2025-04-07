@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
-import { supabase, Table } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function TablesPage() {
-  const [tables, setTables] = useState<Table[]>([]);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     fetchTables();
@@ -19,29 +16,19 @@ export default function TablesPage() {
   async function fetchTables() {
     setLoading(true);
     try {
-      const { data, error: tablesError } = await supabase
+      const { data, error } = await supabase
         .from('tables')
         .select('*')
         .order('table_number');
-
-      if (tablesError) throw new Error(tablesError.message);
+      
+      if (error) throw new Error(error.message);
       setTables(data || []);
     } catch (err) {
       console.error('Error fetching tables:', err);
-      setError('加载餐桌时出错');
+      setError('加载餐桌数据时出错');
     } finally {
       setLoading(false);
     }
-  }
-
-  function showQRCode(table: Table) {
-    setSelectedTable(table);
-    setShowQRModal(true);
-  }
-
-  function getOrderUrl(tableNumber: string) {
-    // 这里使用相对链接，在生产环境中应该使用完整的URL
-    return `/order/${tableNumber}`;
   }
 
   return (
@@ -57,8 +44,8 @@ export default function TablesPage() {
 
       <main className="max-w-7xl mx-auto p-4">
         <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">所有餐桌</h2>
-          <button
+          <h2 className="text-xl font-semibold text-gray-800">餐桌列表</h2>
+          <button 
             onClick={fetchTables}
             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
           >
@@ -76,24 +63,21 @@ export default function TablesPage() {
           </div>
         ) : tables.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-6 text-center">
-            <p className="text-gray-500">没有找到餐桌，请在管理员界面添加餐桌</p>
-            <Link 
-              href="/admin"
-              className="mt-4 inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
-            >
-              前往管理界面
-            </Link>
+            <p className="text-gray-500">目前没有餐桌信息</p>
+            <p className="mt-2 text-sm text-gray-500">请在管理员面板添加餐桌</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tables.map((table) => (
-              <div
-                key={table.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
+              <div 
+                key={table.id} 
+                className="bg-white rounded-lg shadow overflow-hidden"
               >
-                <div className="p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-bold">桌号: {table.table_number}</h3>
+                <div className="p-4 border-b">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">
+                      餐桌 {table.table_number}
+                    </h3>
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         table.status === 'available'
@@ -101,53 +85,48 @@ export default function TablesPage() {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {table.status === 'available' ? '空闲' : '使用中'}
+                      {table.status === 'available' ? '可用' : '已占用'}
                     </span>
                   </div>
-                  <button
-                    onClick={() => showQRCode(table)}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded mt-2"
-                  >
-                    显示二维码
-                  </button>
+                </div>
+
+                <div className="p-4">
+                  {table.qr_code ? (
+                    <div className="flex flex-col items-center">
+                      <img
+                        src={table.qr_code}
+                        alt={`桌号 ${table.table_number} 的QR码`}
+                        className="w-full max-w-[200px] h-auto mx-auto border p-2"
+                      />
+                      <p className="mt-3 text-center text-sm text-gray-500">
+                        扫描此二维码进入点餐页面
+                      </p>
+                      <div className="mt-3 flex justify-center">
+                        <a
+                          href={table.qr_code}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:text-purple-800 text-sm"
+                          download={`table-${table.table_number}-qrcode.png`}
+                        >
+                          下载QR码
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center p-6">
+                      <p className="text-gray-500">此餐桌尚未生成QR码</p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        请在管理员面板为此餐桌生成QR码
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </main>
-
-      {/* 二维码弹窗 */}
-      {showQRModal && selectedTable && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="text-center mb-4">
-              <h3 className="text-xl font-bold mb-1">桌号: {selectedTable.table_number}</h3>
-              <p className="text-gray-600 text-sm">扫描下方二维码开始点餐</p>
-            </div>
-            
-            <div className="flex justify-center mb-6">
-              <div className="p-4 bg-white border rounded-lg">
-                <QRCodeSVG
-                  value={getOrderUrl(selectedTable.table_number)}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <button
-                onClick={() => setShowQRModal(false)}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
