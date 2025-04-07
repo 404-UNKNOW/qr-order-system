@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 扫码点餐系统
 
-## Getting Started
+基于Next.js和Supabase构建的现代化餐厅扫码点餐系统。
 
-First, run the development server:
+## 功能特点
+
+- **用户友好的界面**: 美观、直观的用户界面设计，提供流畅的点餐体验
+- **多角色支持**: 包含顾客点餐、厨房处理和管理员后台三种角色视图
+- **实时更新**: 利用Supabase实时API，订单状态实时同步
+- **二维码管理**: 自动为每个餐桌生成专属二维码
+- **菜单管理**: 轻松添加、编辑和管理菜品
+- **订单追踪**: 完整的订单生命周期管理
+
+## 技术栈
+
+- **前端**: Next.js 14、React、TypeScript、TailwindCSS
+- **后端**: Supabase (PostgreSQL数据库、实时API、认证)
+- **部署**: 可部署在Vercel上
+
+## 快速开始
+
+1. 克隆项目并安装依赖:
+
+```bash
+git clone [仓库URL]
+cd qr-order-system
+npm install
+```
+
+2. 配置环境变量:
+
+复制`.env.local.example`为`.env.local`并填入您的Supabase项目凭证:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+3. 运行开发服务器:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. 在浏览器中访问 [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 数据库设置
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+在Supabase中需要创建以下表:
 
-## Learn More
+1. **menu_items** (菜单项)
+   - id: int8
+   - name: text
+   - description: text
+   - price: float8
+   - image_url: text
+   - category: text
+   - available: boolean
 
-To learn more about Next.js, take a look at the following resources:
+2. **tables** (餐桌)
+   - id: int8
+   - table_number: text
+   - qr_code: text (可选)
+   - status: text (available/occupied)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **orders** (订单)
+   - id: int8
+   - table_number: text
+   - status: text (pending/preparing/completed/cancelled)
+   - total_amount: float8
+   - created_at: timestamptz
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **order_items** (订单项)
+   - id: int8
+   - order_id: int8 (外键关联orders表)
+   - menu_id: int8 (外键关联menu_items表)
+   - quantity: int4
+   - price: float8
+   - notes: text (可选)
 
-## Deploy on Vercel
+## 部署
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. 创建Supabase项目并设置数据库表
+2. 在Vercel上创建新项目并连接到代码仓库
+3. 设置环境变量
+4. 部署!
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 许可证
+
+MIT
