@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase, Order, OrderItem } from '@/lib/supabase';
+import { supabase, Order } from '@/lib/supabase';
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
