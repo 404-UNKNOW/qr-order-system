@@ -4,8 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+// 定义Table类型
+interface Table {
+  id: number;
+  table_number: string;
+  status: string;
+  qr_code?: string;
+}
+
 export default function TablesPage() {
-  const [tables, setTables] = useState([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 

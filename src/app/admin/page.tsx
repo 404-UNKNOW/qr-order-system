@@ -4,15 +4,51 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+// 定义类型
+interface MenuItem {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category: string;
+  available: boolean;
+}
+
+interface OrderItem {
+  id: number;
+  order_id: number;
+  menu_item?: MenuItem;
+  quantity: number;
+  price: number;
+  notes?: string;
+}
+
+interface Order {
+  id: number;
+  table_number: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  items: OrderItem[];
+}
+
+interface Table {
+  id: number;
+  table_number: string;
+  status: string;
+  qr_code?: string;
+}
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [menuItems, setMenuItems] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [tables, setTables] = useState([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [activeTab, setActiveTab] = useState('menu');
 
   // 认证检查
@@ -31,7 +67,7 @@ export default function AdminPage() {
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (e) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // 简单示例，实际应用中应该使用加密存储和验证
     if (username === 'admin' && password === 'admin123') {
@@ -224,7 +260,12 @@ export default function AdminPage() {
 }
 
 // 菜单管理组件
-function MenuManagement({ menuItems, refreshData }) {
+interface MenuManagementProps {
+  menuItems: MenuItem[];
+  refreshData: () => void;
+}
+
+function MenuManagement({ menuItems, refreshData }: MenuManagementProps) {
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -233,17 +274,19 @@ function MenuManagement({ menuItems, refreshData }) {
     category: '',
     available: true
   });
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
     setNewItem({
       ...newItem,
       [name]: type === 'checkbox' ? checked : value
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
@@ -285,7 +328,7 @@ function MenuManagement({ menuItems, refreshData }) {
     }
   };
 
-  const handleEdit = (item) => {
+  const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setNewItem({
       name: item.name,
@@ -297,7 +340,7 @@ function MenuManagement({ menuItems, refreshData }) {
     });
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('确定要删除这个菜品吗？')) return;
     
     try {
@@ -315,7 +358,7 @@ function MenuManagement({ menuItems, refreshData }) {
   };
 
   // 按类别分组显示菜单
-  const groupedMenuItems = menuItems.reduce((acc, item) => {
+  const groupedMenuItems = menuItems.reduce((acc: Record<string, MenuItem[]>, item: MenuItem) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
     }
@@ -398,7 +441,7 @@ function MenuManagement({ menuItems, refreshData }) {
               value={newItem.description}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
-              rows="2"
+              rows={2}
             ></textarea>
           </div>
           
@@ -511,13 +554,17 @@ function MenuManagement({ menuItems, refreshData }) {
 }
 
 // 订单管理组件
-function OrderManagement({ orders }) {
-  function formatDateTime(dateString) {
+interface OrderManagementProps {
+  orders: Order[];
+}
+
+function OrderManagement({ orders }: OrderManagementProps) {
+  function formatDateTime(dateString: string) {
     const date = new Date(dateString);
     return date.toLocaleString('zh-CN');
   }
 
-  function getStatusColor(status) {
+  function getStatusColor(status: string) {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'preparing': return 'bg-blue-100 text-blue-800';
@@ -527,7 +574,7 @@ function OrderManagement({ orders }) {
     }
   }
 
-  function getStatusText(status) {
+  function getStatusText(status: string) {
     switch (status) {
       case 'pending': return '待处理';
       case 'preparing': return '准备中';
@@ -586,7 +633,7 @@ function OrderManagement({ orders }) {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan="2" className="py-2 text-right font-medium">总计:</td>
+                      <td colSpan={2} className="py-2 text-right font-medium">总计:</td>
                       <td className="py-2 text-right font-medium">¥{order.total_amount.toFixed(2)}</td>
                     </tr>
                   </tfoot>
@@ -601,14 +648,19 @@ function OrderManagement({ orders }) {
 }
 
 // 餐桌管理组件
-function TableManagement({ tables, refreshData }) {
+interface TableManagementProps {
+  tables: Table[];
+  refreshData: () => void;
+}
+
+function TableManagement({ tables, refreshData }: TableManagementProps) {
   const [newTable, setNewTable] = useState({
     table_number: '',
     status: 'available'
   });
-  const [editingTable, setEditingTable] = useState(null);
+  const [editingTable, setEditingTable] = useState<Table | null>(null);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewTable({
       ...newTable,
@@ -616,7 +668,7 @@ function TableManagement({ tables, refreshData }) {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
@@ -649,7 +701,7 @@ function TableManagement({ tables, refreshData }) {
     }
   };
 
-  const handleEdit = (table) => {
+  const handleEdit = (table: Table) => {
     setEditingTable(table);
     setNewTable({
       table_number: table.table_number,
@@ -657,7 +709,7 @@ function TableManagement({ tables, refreshData }) {
     });
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('确定要删除这个餐桌吗？')) return;
     
     try {
@@ -675,7 +727,7 @@ function TableManagement({ tables, refreshData }) {
   };
 
   // 生成餐桌的QR码URL
-  const getQRCodeUrl = (tableNumber) => {
+  const getQRCodeUrl = (tableNumber: string) => {
     // 使用当前网站的域名
     const baseUrl = typeof window !== 'undefined' 
       ? `${window.location.protocol}//${window.location.host}`
@@ -689,7 +741,7 @@ function TableManagement({ tables, refreshData }) {
   };
 
   // 更新QR码到数据库
-  const updateQrCode = async (tableId, tableNumber) => {
+  const updateQrCode = async (tableId: number, tableNumber: string) => {
     try {
       const qrCodeUrl = getQRCodeUrl(tableNumber);
       
